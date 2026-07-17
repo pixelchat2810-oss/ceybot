@@ -2,6 +2,8 @@ const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder
 const fs = require('fs');
 const axios = require('axios');
 require('dotenv').config();
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers]
@@ -14,20 +16,49 @@ const saveDB = (db) => fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 function getGuildData(guildId) {
     let db = getDB();
     if (!db.guilds) db.guilds = {};
-    if (!db.guilds[guildId]) db.guilds[guildId] = { joinChannel: null, leaveChannel: null, joinMsg: '👋 {user} sunucuya hoş geldin!', leaveMsg: '😢 {user} aramızdan ayrıldı.' };
+    if (!db.guilds[guildId]) db.guilds[guildId] = { joinChannel: null, leaveChannel: null, joinMsg: '👋 {user} sunucuya hoş geldin!', leaveMsg: '😢 {user} aramızdan ayrıldı.', aiChannel: null };
     return db.guilds[guildId];
 }
 
-let isMaintenance = false;
+const OWNERS = ['1200687946827837453', '1402724852330139699'];
 
 client.once('ready', () => console.log(`${client.user.tag} aktif!`));
 
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
+    // ===== AI KANALI =====
+    if (message.guild) {
+        const gData = getGuildData(message.guild.id);
+        if (gData.aiChannel && message.channel.id === gData.aiChannel) {
+            let d = getDB();
+            const cooldownKey = `ai_cooldown_${message.guild.id}`;
+            const lastCall = d[cooldownKey];
+            if (lastCall && Date.now() - lastCall < 5000) return;
+            d[cooldownKey] = Date.now();
+            saveDB(d);
+            await message.channel.sendTyping();
+            try {
+                const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+                const result = await model.generateContent(message.content);
+                const reply = result.response.text().slice(0, 2000);
+                await message.reply(reply || 'Cevap alamadım.');
+            } catch (e) {
+                console.error('AI hatası:', e);
+                const hata = e.status === 429 ? 'Çok fazla istek gönderildi, biraz bekle ve tekrar dene.' : 'Bir hata oluştu.';
+                await message.reply(hata);
+            }
+            return;
+        }
+    }
+
     // ===== SEVIYE SISTEMI =====
     let db = getDB();
-    if (!db[message.author.id]) db[message.author.id] = { balance: 0, lastDaily: 0, xp: 0, level: 1 };
+    if (!db[message.author.id]) db[message.author.id] = { balance: 0, lastDaily: 0, xp: 0, level: 1, msgCount: {} };
+    if (message.guild) {
+        if (!db[message.author.id].msgCount) db[message.author.id].msgCount = {};
+        db[message.author.id].msgCount[message.guild.id] = (db[message.author.id].msgCount[message.guild.id] || 0) + 1;
+    }
     db[message.author.id].xp += Math.floor(Math.random() * 11) + 5;
     if (db[message.author.id].xp >= db[message.author.id].level * 100) {
         db[message.author.id].level++;
@@ -61,7 +92,6 @@ client.on('messageCreate', async (message) => {
         'nasılsın?': 'İyiyim.',
         'ne yapıyorsun?': 'Oturuyorum, sizi izliyorum.👽',
         'tamam.': 'Tamam.',
-        'iyi bende': 'e güzel. yardım ihtiyaç olursa buradayım!',
         'senin adın ne?': 'Ceycey?',
         ':middle_finger:': 'Tamam.'
     };
@@ -93,13 +123,13 @@ client.on('messageCreate', async (message) => {
     }
 
     if (userMsg === 'aktifolmak') {
-        if (message.author.id !== '1200687946827837453') return message.reply(`𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?\n<@${message.author.id}>`);
+        if (!OWNERS.includes(message.author.id)) return message.reply(`𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?\n<@${message.author.id}>`);
         await message.delete().catch(() => {});
         return message.channel.send('Aktif ola bilirmisiniz?💝😻');
     }
 
     if (userMsg === 'foto') {
-        if (message.author.id !== '1200687946827837453') return message.reply(`𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?\n<@${message.author.id}>`);
+        if (!OWNERS.includes(message.author.id)) return message.reply(`𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?\n<@${message.author.id}>`);
         await message.delete().catch(() => {});
         const embed = new EmbedBuilder()
             .setImage('https://cdn.discordapp.com/attachments/1266445451650007182/1515977196802539571/Screenshot_20260615_111008.jpg?ex=6a30f749&is=6a2fa5c9&hm=8a70767d9d66e95d69fad44a6cb4c3d87d7f1450b03e5dbe409eb34217f84566&');
@@ -107,27 +137,32 @@ client.on('messageCreate', async (message) => {
     }
 
     // ===== C! PREFIXLI KOMUTLAR =====
-    if (!message.content.startsWith('C!')) return;
+    if (!message.content.toLowerCase().startsWith('c!')) return;
     const args = message.content.slice(2).trim().split(/ +/);
     const command = args.shift().toLowerCase();
     let commandFound = false;
 
-    if (isMaintenance && message.author.id !== '1200687946827837453') return message.reply('❌ Şuan Bot\'a Bakım Yapılıyor Lütfen Daha Sonra Tekrar Dene!');
+    // ---- BAKIM KONTROL (per-komut) ----
+    if (!OWNERS.includes(message.author.id) && !['bakim-ac', 'bakim-kapat'].includes(command)) {
+        let d = getDB();
+        const bakimli = d._bakim || [];
+        if (bakimli.includes(command)) return message.reply('❌ Bu komut şu anda bakımda!');
+    }
 
     // ---- C!yardim (Menülü) ----
     if (command === 'yardim') {
         commandFound = true;
-        if (isMaintenance) return message.reply('❌ Şuan Bot\'a Bakım Yapılıyor Lütfen Daha Sonra Tekrar Dene!');
 
         const embed = new EmbedBuilder()
             .setTitle('CeyCeyBot V2 - Kategori Seçin')
             .setDescription('𐙚 Bütün Komutlar\n𐙚 Moderasyon Komutları\n𐙚 Kullanıcı Komutları\n𐙚 Ekonomi Komutları\n𐙚 Diğer Komutlar')
             .setColor(0x2f3136);
 
+        const menuId = `help_${message.author.id}`;
         const row = new ActionRowBuilder().addComponents(
             new StringSelectMenuBuilder()
-                .setCustomId('help_menu')
-                .setPlaceholder('Kategori Seçin')
+                .setCustomId(menuId)
+                .setPlaceholder(`${message.author.username}, Kategori Seçin`)
                 .addOptions([
                     { label: 'Bütün Komutlar', value: 'all', emoji: '📦' },
                     { label: 'Moderasyon', value: 'mod', emoji: '🛡️' },
@@ -144,7 +179,7 @@ client.on('messageCreate', async (message) => {
     if (['yapicim', 'yapimci', 'yapımcı', 'yapımcın'].includes(command)) {
         commandFound = true;
         const embed = new EmbedBuilder()
-            .setTitle('Yapımcın kim? <@1200687946827837453> / `Yan Yapımcı <@1402724852330139699>`')
+            .setTitle(Yapımcın kim? <@1200687946827837453> / Yan Yapımcı <@1402724852330139699>`)
             .setDescription('𝐘𝐚𝐩𝐢𝐦𝐜𝐢𝐦 𝐌𝐞𝐥𝐢𝐬 𝐚𝐝𝐥𝐢 𝐤𝐮𝐥𝐥𝐚𝐧𝐢𝐜𝐢\n𝐛𝐞𝐧𝐢 𝐨 𝐭𝐚𝐬𝐚𝐫𝐥𝐚𝐝𝐢 :𝟑.𝐇𝐚𝐭𝐭𝐚 𝐤𝐞𝐧𝐝𝐢𝐬𝐢 𝐑-𝐭𝐮𝐛𝐞𝐫 𝐤𝐚𝐧𝐚𝐥𝐢𝐧𝐢𝐧 𝐢𝐬𝐦𝐢𝐝𝐞 𝐑𝐨𝐛𝐥𝐨𝐱𝐌𝐞𝐥𝐬𝐢')
             .setFooter({ text: '𝐌𝐞𝐥𝐢𝐬 = 𝐘𝐚𝐩𝐢𝐦𝐜𝐢𝐦 ⚒️' })
             .setColor(0xFFD1DC)
@@ -155,7 +190,7 @@ client.on('messageCreate', async (message) => {
     // ---- C!konus ----
     if (command === 'konus') {
         commandFound = true;
-        if (message.author.id !== '1200687946827837453') return message.reply('𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?');
+        if (!OWNERS.includes(message.author.id)) return message.reply('𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?');
         await message.delete().catch(() => {});
         const text = args.join(' ');
         if (text) message.channel.send(`**${text}**`);
@@ -164,7 +199,7 @@ client.on('messageCreate', async (message) => {
     // ---- C!etiketlemek ----
     if (['etiketle', 'etiketlemek'].includes(command)) {
         commandFound = true;
-        if (message.author.id !== '1200687946827837453') return message.reply(`𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?\n<@${message.author.id}>`);
+        if (!OWNERS.includes(message.author.id)) return message.reply(`𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?\n<@${message.author.id}>`);
         await message.delete().catch(() => {});
         const text = args.join(' ');
         message.channel.send({ content: `${text}\n@everyone & @here`, allowedMentions: { parse: ['everyone', 'roles', 'users'] } });
@@ -187,8 +222,6 @@ client.on('messageCreate', async (message) => {
         commandFound = true;
         if (!message.member.permissions.has('ManageMessages')) return message.reply('❌ **Bu komutu kullanmak için `Mesajları Yönet` yetkisine sahip olmalısın!**');
         if (!message.guild.members.me.permissions.has('ManageMessages')) return message.reply('❌ **Bu komutu kullanabilmem için `Mesajları Yönet` yetkisine sahip olmalıyım!**');
-        const allowedIDs = ['1384142034884886731', '1200687946827837453'];
-        if (!allowedIDs.includes(message.author.id)) return message.reply(`𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?\n<@${message.author.id}>`);
         const amount = parseInt(args[0]);
         if (isNaN(amount) || amount < 1 || amount > 1000) return message.reply('❌ **Lütfen 1 ile 1000 arasında bir sayı gir!**');
         await message.delete().catch(() => {});
@@ -209,8 +242,30 @@ client.on('messageCreate', async (message) => {
             const msg = await message.channel.send({ embeds: [embed] });
             setTimeout(() => msg.delete().catch(() => {}), 4000);
         } catch (error) {
-            return message.reply('❌ **Hata:** Silmeye çalıştığın mesajların arasında 14 günden eski mesajlar var!');
+            return message.reply('❌ **Hata:** Mesajlar silinemedi! 14 günden eski mesajlar olabilir veya yetkim yetersiz.');
         }
+    }
+
+    // ---- C!ban ----
+    if (command === 'ban') {
+        commandFound = true;
+        if (!message.member.permissions.has('BanMembers')) return message.reply('❌ **Bu komutu kullanmak için `Üyeleri Yasakla` yetkisine sahip olmalısın!**');
+        if (!message.guild.members.me.permissions.has('BanMembers')) return message.reply('❌ **Bu komutu kullanabilmem için `Üyeleri Yasakla` yetkisine sahip olmalıyım!**');
+        const target = message.mentions.users.first();
+        if (!target) return message.reply('❌ **Birini etiketle!**');
+        await message.guild.members.ban(target, { reason: args.slice(1).join(' ') || 'Sebep belirtilmedi' });
+        message.reply(`✅ **${target.tag}** sunucudan yasaklandı!`);
+    }
+
+    // ---- C!kick ----
+    if (command === 'kick') {
+        commandFound = true;
+        if (!message.member.permissions.has('KickMembers')) return message.reply('❌ **Bu komutu kullanmak için `Üyeleri At` yetkisine sahip olmalısın!**');
+        if (!message.guild.members.me.permissions.has('KickMembers')) return message.reply('❌ **Bu komutu kullanabilmem için `Üyeleri At` yetkisine sahip olmalıyım!**');
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('❌ **Birini etiketle!**');
+        await target.kick(args.slice(1).join(' ') || 'Sebep belirtilmedi');
+        message.reply(`✅ **${target.user.tag}** sunucudan atıldı!`);
     }
 
     // ---- C!zar ----
@@ -253,7 +308,7 @@ client.on('messageCreate', async (message) => {
 │**Coğrafya** : ${getRandom(0, 100)}
 │**Türk Tarihi ve Edebiyat** : ${getRandom(0, 100)}
 │**Görsel sanatlar/Müzik** : ${getRandom(0, 100)}
-│**Bioloji** : ${getRandom(0, 100)}
+│**Biyoloji** : ${getRandom(0, 100)}
 │**Kimya** : ${getRandom(0, 100)}`);
         return message.reply({ embeds: [embed] });
     }
@@ -310,7 +365,7 @@ client.on('messageCreate', async (message) => {
     // ---- C!onemli ----
     if (command === 'onemli') {
         commandFound = true;
-        if (message.author.id !== '1200687946827837453') return message.reply(`𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?\n<@${message.author.id}>`);
+        if (!OWNERS.includes(message.author.id)) return message.reply(`𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?\n<@${message.author.id}>`);
         await message.delete().catch(() => {});
         message.channel.send({
             content: `ACİL DUYURU
@@ -356,7 +411,7 @@ Lütfen bu mesajı başka bir sunucuya kopyalayıp yapıştırarak diğer insanl
             .setTitle(`${message.author.username} Shipledi`)
             .setColor(randomColor)
             .setDescription(`${message.author.toString()} <@${target.id}>\n\n**%${percentage} Seviyor Seni**`)
-            .setFooter({ text: `${message.member.nickname || message.author.username} Kullandı.`, iconURL: message.author.displayAvatarURL() })
+            .setFooter({ text: `${message.member?.nickname || message.author.username} Kullandı.`, iconURL: message.author.displayAvatarURL() })
             .setTimestamp();
         const msg = await message.reply({ embeds: [embed] });
         await msg.react('❤️').catch(() => {});
@@ -366,37 +421,53 @@ Lütfen bu mesajı başka bir sunucuya kopyalayıp yapıştırarak diğer insanl
     // ---- C!bakim-ac / C!bakim-kapat ----
     if (command === 'bakim-ac') {
         commandFound = true;
-        if (message.author.id !== '1200687946827837453') return message.reply(`𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?\n<@${message.author.id}>`);
-        isMaintenance = true;
-        return message.reply('✅・Başarıyla Bakım Modu Açılmıştır!');
+        if (!OWNERS.includes(message.author.id)) return message.reply(`𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?\n<@${message.author.id}>`);
+        if (!args.length) {
+            let d = getDB();
+            const bakimli = d._bakim || [];
+            return message.reply(bakimli.length ? `Bakımdaki komutlar: ${bakimli.map(c => `\`${c}\``).join(', ')}` : 'Bakımda hiç komut yok.');
+        }
+        const target = args[0].toLowerCase();
+        let d = getDB();
+        if (!d._bakim) d._bakim = [];
+        if (d._bakim.includes(target)) return message.reply(`❌ \`${target}\` zaten bakımda!`);
+        d._bakim.push(target);
+        saveDB(d);
+        return message.reply(`✅ \`${target}\` bakıma alındı!`);
     }
 
     if (command === 'bakim-kapat') {
         commandFound = true;
-        if (message.author.id !== '1200687946827837453') return message.reply(`𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?\n<@${message.author.id}>`);
-        isMaintenance = false;
-        await message.delete().catch(() => {});
-        return message.channel.send('✅・Başarıyla Bakım Modu Kapatılmıştır!');
+        if (!OWNERS.includes(message.author.id)) return message.reply(`𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?\n<@${message.author.id}>`);
+        if (!args.length) return message.reply('❌ Bakımdan çıkarmak için komut adı gir. Ör: `C!bakim-kapat sil`');
+        const target = args[0].toLowerCase();
+        let d = getDB();
+        if (!d._bakim) d._bakim = [];
+        if (!d._bakim.includes(target)) return message.reply(`❌ \`${target}\` bakımda değil!`);
+        d._bakim = d._bakim.filter(c => c !== target);
+        saveDB(d);
+        return message.reply(`✅ \`${target}\` bakımdan çıkarıldı!`);
     }
 
     // ---- C!random ----
     if (command === 'random') {
         commandFound = true;
-        const allowedIDs = ['1384142034884886731', '1200687946827837453'];
+        const allowedIDs = ['1384142034884886731', ...OWNERS];
         if (!allowedIDs.includes(message.author.id)) return message.reply(`𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?\n<@${message.author.id}>`);
         const msg = await message.reply('Random Kişi Seçiliyor...');
         setTimeout(async () => {
             const randomMember = message.guild.members.cache.random();
+            if (!randomMember) return await msg.edit('Sunucuda üye bulunamadı.').catch(() => {});
             await msg.edit(`Random Kişi Seçildi **${randomMember.user.username}**`).catch(() => {});
         }, 5000);
     }
 
     // ---- EKONOMI KOMUTLARI ----
-    if (command === 'bal') {
+    if (['bal', 'cash'].includes(command)) {
         commandFound = true;
         let d = getDB();
         const bal = d[message.author.id]?.balance || 0;
-        message.reply(`💵 Bakiyen: **${bal} OwO Coin**`);
+        return message.reply(`💵 Bakiyen: **${bal} OwO Coin**`);
     }
 
     if (command === 'cf') {
@@ -408,8 +479,8 @@ Lütfen bu mesajı başka bir sunucuya kopyalayıp yapıştırarak diğer insanl
         let userBal = d[message.author.id].balance || 0;
         if (userBal < bet) return message.reply('❌ Yetersiz bakiye!');
         const win = Math.random() > 0.5;
-        if (win) { userBal += bet; message.reply(`✅ Kazandın! Yeni bakiyen: **${userBal}**`); }
-        else { userBal -= bet; message.reply(`❌ Kaybettin! Yeni bakiyen: **${userBal}**`); }
+        if (win) { userBal += bet; return message.reply(`✅ Kazandın! Yeni bakiyen: **${userBal}**`); }
+        else { userBal -= bet; return message.reply(`❌ Kaybettin! Yeni bakiyen: **${userBal}**`); }
         d[message.author.id].balance = userBal;
         saveDB(d);
     }
@@ -421,7 +492,7 @@ Lütfen bu mesajı başka bir sunucuya kopyalayıp yapıştırarak diğer insanl
         if (!d[message.author.id]) d[message.author.id] = { balance: 0, lastDaily: 0, xp: 0, level: 1 };
         d[message.author.id].balance = (d[message.author.id].balance || 0) + reward;
         saveDB(d);
-        message.reply(`🏹 Avlandın ve **${reward}** Coin kazandın! Toplam: **${d[message.author.id].balance}**`);
+        return message.reply(`🏹 Avlandın ve **${reward}** Coin kazandın! Toplam: **${d[message.author.id].balance}**`);
     }
 
     if (command === 'daily') {
@@ -440,7 +511,7 @@ Lütfen bu mesajı başka bir sunucuya kopyalayıp yapıştırarak diğer insanl
         d[message.author.id].balance = (d[message.author.id].balance || 0) + 500;
         d[message.author.id].lastDaily = now;
         saveDB(d);
-        message.reply(`🎁 Günlük ödülün olan **500 OwO Coin** hesabına eklendi!`);
+        return message.reply(`🎁 Günlük ödülün olan **500 OwO Coin** hesabına eklendi!`);
     }
 
     // ---- C!seviye / C!rank ----
@@ -468,20 +539,22 @@ Lütfen bu mesajı başka bir sunucuya kopyalayıp yapıştırarak diğer insanl
         if (member.id === message.guild.ownerId) return message.reply('❌ Sunucu sahibine işlem yapamam.');
         await message.delete().catch(() => {});
         try {
-            if (member.roles.cache.has(role.id)) {
-                await member.roles.remove(role);
-                message.channel.send(`**${member.user.username}**'dan <@&${role.id}> rolü alındı!`);
-            } else {
+            const isRolver = command === 'rolver';
+            if (isRolver) {
+                if (member.roles.cache.has(role.id)) return message.channel.send(`**${member.user.username}** zaten <@&${role.id}> rolüne sahip!`);
                 await member.roles.add(role);
                 message.channel.send(`**${member.user.username}**'a <@&${role.id}> rolü verildi!`);
+            } else {
+                if (!member.roles.cache.has(role.id)) return message.channel.send(`**${member.user.username}**'da <@&${role.id}> rolü yok!`);
+                await member.roles.remove(role);
+                message.channel.send(`**${member.user.username}**'dan <@&${role.id}> rolü alındı!`);
             }
         } catch { message.reply('❌ Rol işlemi başarısız!'); }
     }
 
-    // ---- C!sunucubilgi / C!sb ----
-    if (['sunucubilgi', 'sb'].includes(command)) {
+    // ---- C!sunucubilgi / C!sw ----
+    if (['sunucubilgi', 'sw'].includes(command)) {
         commandFound = true;
-        if (isMaintenance) return message.reply('❌ Bakımdayız!');
         const guild = message.guild;
         const embed = new EmbedBuilder()
             .setTitle(`${guild.name} Sunucusu Hakkında Bilgiler`)
@@ -524,7 +597,7 @@ Lütfen bu mesajı başka bir sunucuya kopyalayıp yapıştırarak diğer insanl
     if (command === 'anket') {
         commandFound = true;
         const bypassRole = message.member.roles.cache.find(r => r.name === 'Mekanın sahibi👑');
-        const isAuthorized = message.author.id === '1200687946827837453' || bypassRole || message.member.permissions.has('ManageMessages');
+        const isAuthorized = OWNERS.includes(message.author.id) || bypassRole || message.member.permissions.has('ManageMessages');
         if (!isAuthorized) return message.reply('𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?');
         const targetChannel = message.mentions.channels.first();
         let desc = ':bar_chart: Bu kurulum, anketi özel ihtiyaçlarınıza ve tercihlerinize göre uyarlamanızı sağlar.';
@@ -544,6 +617,19 @@ Lütfen bu mesajı başka bir sunucuya kopyalayıp yapıştırarak diğer insanl
         return message.reply({ embeds: [embed], components: [row] });
     }
 
+    // ---- C!setup (AI Kanalı) ----
+    if (command === 'setup') {
+        commandFound = true;
+        if (!message.member.permissions.has('ManageGuild')) return message.reply('❌ Yetkin yok!');
+        const row = new ActionRowBuilder().addComponents(
+            new ChannelSelectMenuBuilder()
+                .setCustomId('ai_channel_set')
+                .setPlaceholder('AI kanalını seç...')
+                .setChannelTypes(ChannelType.GuildText)
+        );
+        return message.reply({ content: 'Yapay zekanın çalışacağı kanalı seç:', components: [row] });
+    }
+
     // ---- C!giris-cikis ----
     if (command === 'giris-cikis') {
         commandFound = true;
@@ -558,6 +644,37 @@ Lütfen bu mesajı başka bir sunucuya kopyalayıp yapıştırarak diğer insanl
             new ButtonBuilder().setCustomId('set_channels').setLabel('Kanal Seç').setStyle(ButtonStyle.Secondary)
         );
         await message.reply({ embeds: [embed], components: [row] });
+    }
+
+    // ---- C!mesajtop ----
+    if (command === 'mesajtop') {
+        commandFound = true;
+        let db = getDB();
+        const guildId = message.guild.id;
+        const entries = Object.entries(db).filter(([id]) => id !== 'guilds' && db[id].msgCount?.[guildId]).map(([id, data]) => ({ id, count: data.msgCount[guildId] }));
+        if (!entries.length) return message.reply('Henüz mesaj verisi yok.');
+        entries.sort((a, b) => b.count - a.count);
+        const page = parseInt(args[0]) || 1;
+        const perPage = 10;
+        const maxPage = Math.ceil(entries.length / perPage);
+        const start = (page - 1) * perPage;
+        const sliced = entries.slice(start, start + perPage);
+        const medals = ['🥇', '🥈', '🥉'];
+        const desc = sliced.map((e, i) => `${medals[start + i] || '🔹'} <@${e.id}> — **${e.count}** mesaj`).join('\n');
+        const embed = new EmbedBuilder()
+            .setTitle('📊 En Çok Mesaj Gönderenler')
+            .setDescription(desc)
+            .setColor(0x2f3136)
+            .setFooter({ text: `Sayfa ${page}/${maxPage} • Toplam ${entries.length} kişi` });
+        const components = [];
+        if (maxPage > 1) {
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId(`mesajtop_prev_${guildId}`).setLabel('◀ Önceki').setStyle(ButtonStyle.Primary).setDisabled(page <= 1),
+                new ButtonBuilder().setCustomId(`mesajtop_next_${guildId}`).setLabel('Sonraki ▶').setStyle(ButtonStyle.Primary).setDisabled(page >= maxPage)
+            );
+            components.push(row);
+        }
+        return message.reply({ embeds: [embed], components });
     }
 
     // ---- HATA MESAJI ----
@@ -635,6 +752,30 @@ client.on('interactionCreate', async (interaction) => {
             );
             return interaction.reply({ content: customId === 'set_join_channel' ? 'Giriş kanalını seç:' : 'Çıkış kanalını seç:', components: [row], flags: 64 });
         }
+
+        // MESAJTOP SAYFALAMA
+        if (customId.startsWith('mesajtop_')) {
+            const parts = customId.split('_');
+            const dir = parts[1];
+            const guildId = parts[2];
+            let db = getDB();
+            const entries = Object.entries(db).filter(([id]) => id !== 'guilds' && db[id].msgCount?.[guildId]).map(([id, data]) => ({ id, count: data.msgCount[guildId] }));
+            entries.sort((a, b) => b.count - a.count);
+            const perPage = 10;
+            const maxPage = Math.ceil(entries.length / perPage);
+            const currentPage = parseInt(interaction.message.embeds[0]?.footer?.text?.match(/Sayfa (\d+)/)?.[1]) || 1;
+            const page = dir === 'next' ? Math.min(currentPage + 1, maxPage) : Math.max(currentPage - 1, 1);
+            const start = (page - 1) * perPage;
+            const sliced = entries.slice(start, start + perPage);
+            const medals = ['🥇', '🥈', '🥉'];
+            const desc = sliced.map((e, i) => `${medals[start + i] || '🔹'} <@${e.id}> — **${e.count}** mesaj`).join('\n');
+            const embed = EmbedBuilder.from(interaction.message.embeds[0]).setDescription(desc).setFooter({ text: `Sayfa ${page}/${maxPage} • Toplam ${entries.length} kişi` });
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId(`mesajtop_prev_${guildId}`).setLabel('◀ Önceki').setStyle(ButtonStyle.Primary).setDisabled(page <= 1),
+                new ButtonBuilder().setCustomId(`mesajtop_next_${guildId}`).setLabel('Sonraki ▶').setStyle(ButtonStyle.Primary).setDisabled(page >= maxPage)
+            );
+            return interaction.update({ embeds: [embed], components: [row] });
+        }
     }
 
     // MODAL
@@ -674,32 +815,43 @@ client.on('interactionCreate', async (interaction) => {
 
     // KANAL SECIM MENUSU
     // YARDIM MENÜSÜ
-    if (interaction.isStringSelectMenu() && interaction.customId === 'help_menu') {
+    if (interaction.isStringSelectMenu() && interaction.customId.startsWith('help_')) {
+        const authorId = interaction.customId.replace('help_', '');
+        if (interaction.user.id !== authorId) {
+            return interaction.reply({ content: `Menüyü sâdece komutu yazan kişi (<@${authorId}>) kullanabilir!`, flags: 64 });
+        }
         const val = interaction.values[0];
         const menus = {
-            all: { title: '📦 Bütün Komutlar', cmds: '**⚜️ Moderasyon**\n`C!ban` `C!forceban` `C!forceunban` `C!kick` `C!timeout` `C!lock` `C!unlock` `C!rolver` `C!rolal` `C!sil`\n\n**🎈 Kullanıcı**\n`C!ship` `C!zar` `C!hava` `C!iq` `C!karne` `C!deprem` `C!sunucubilgi` `C!sb` `C!seviye` `C!rank`\n\n**💵 Ekonomi**\n`C!bal` `C!cf` `C!s` `C!daily`\n\n**🔧 Diğer**\n`C!yapicim` `C!konus` `C!etiketlemek` `C!onemli` `C!cesur` `C!çamlıcakulesi` `C!giris-cikis` `C!anket` `C!random` `C!bakim-ac` `C!bakim-kapat`' },
-            mod: { title: '🛡️ Moderasyon Komutları', cmds: '`C!ban` - Kullanıcıyı yasakla\n`C!forceban` - ID ile yasakla\n`C!forceunban` - ID ile yasağı kaldır\n`C!kick` - Kullanıcıyı at\n`C!timeout` - Kullanıcıyı sustur\n`C!lock` - Kanalı kilitle\n`C!unlock` - Kanal kilidini aç\n`C!rolver` / `C!rolal` - Rol ver/al\n`C!sil` - Mesaj sil' },
-            user: { title: '🎈 Kullanıcı Komutları', cmds: '`C!ship` - Ship yüzdesi\n`C!zar` - Zar at (1-25)\n`C!hava` - Hava durumu\n`C!iq` - IQ ölç\n`C!karne` - Rastgele karne\n`C!deprem` - Son depremler\n`C!sunucubilgi` / `C!sb` - Sunucu bilgi\n`C!seviye` / `C!rank` - Seviye görüntüle' },
-            eco: { title: '💵 Ekonomi Komutları', cmds: '`C!bal` - Bakiye görüntüle\n`C!cf` - Coinflip (yazı tura)\n`C!s` - Avlan para kazan\n`C!daily` - Günlük 500 Coin' },
-            other: { title: '🔧 Diğer Komutlar', cmds: '`C!yardim` - Yardım menüsü\n`C!yapicim` - Yapımcı bilgisi\n`C!konus` - Konuştur (sahip)\n`C!etiketlemek` - @everyone duyuru\n`C!onemli` - Önemli duyuru\n`C!cesur` - Cesur bilgisi\n`C!çamlıcakulesi` - Çamlıca Kulesi\n`C!giris-cikis` - G/C kurulum paneli\n`C!anket` - Anket sistemi\n`C!random` - Rastgele üye seç\n`C!bakim-ac` / `C!bakim-kapat` - Bakım modu' }
+            all: { title: '📦 Bütün Komutlar', cmds: '**⚜️ Moderasyon**\n`C!ban` `C!kick` `C!lock` `C!unlock` `C!rolver` `C!rolal` `C!sil`\n\n**🎈 Kullanıcı**\n`C!ship` `C!zar` `C!hava` `C!iq` `C!karne` `C!deprem` `C!sunucubilgi` `C!sw` `C!seviye` `C!rank`\n\n**💵 Ekonomi**\n`C!cash` `C!cf` `C!s` `C!daily`\n\n**🔧 Diğer**\n`C!yapicim` `C!konus` `C!etiketlemek` `C!onemli` `C!setup` `C!cesur` `C!çamlıcakulesi` `C!giris-cikis` `C!anket` `C!random` `C!mesajtop` `C!bakim-ac` `C!bakim-kapat`' },            mod: { title: '🛡️ Moderasyon Komutları', cmds: '`C!ban` - Kullanıcıyı yasakla\n`C!kick` - Kullanıcıyı at\n`C!lock` - Kanalı kilitle\n`C!unlock` - Kanal kilidini aç\n`C!rolver` / `C!rolal` - Rol ver/al\n`C!sil` - Mesaj sil' },
+            user: { title: '🎈 Kullanıcı Komutları', cmds: '`C!ship` - Ship yüzdesi\n`C!zar` - Zar at (1-25)\n`C!hava` - Hava durumu\n`C!iq` - IQ ölç\n`C!karne` - Rastgele karne\n`C!deprem` - Son depremler\n`C!sunucubilgi` / `C!sw` - Sunucu bilgi\n`C!seviye` / `C!rank` - Seviye görüntüle' },
+            eco: { title: '💵 Ekonomi Komutları', cmds: '`C!cash` - Bakiye görüntüle\n`C!cf` - Coinflip (yazı tura)\n`C!s` - Avlan para kazan\n`C!daily` - Günlük 500 Coin' },
+            other: { title: '🔧 Diğer Komutlar', cmds: '`C!yardim` - Yardım menüsü\n`C!yapicim` - Yapımcı bilgisi\n`C!konus` - Konuştur (sahip)\n`C!etiketlemek` - @everyone duyuru\n`C!onemli` - Önemli duyuru\n`C!cesur` - Cesur bilgisi\n`C!çamlıcakulesi` - Çamlıca Kulesi\n`C!setup` - AI kanalı kur\n`C!giris-cikis` - G/C kurulum paneli\n`C!anket` - Anket sistemi\n`C!random` - Rastgele üye seç\n`C!mesajtop` - Mesaj sıralaması\n`C!bakim-ac` / `C!bakim-kapat` - Komut bakımı' }
         };
         const data = menus[val];
         const embed = new EmbedBuilder()
             .setTitle(data.title)
             .setDescription(data.cmds)
-            .setColor(0x2f3136)
             .setFooter({ text: 'Kategori değiştirmek için menüyü kullan' });
-        return interaction.update({ embeds: [embed], components: [interaction.message.components] });
+        const menuRow = { type: 1, components: [{ type: 3, custom_id: interaction.customId, placeholder: 'Kategori Seçin', options: [
+            { label: 'Bütün Komutlar', value: 'all', emoji: { name: '📦' } },
+            { label: 'Moderasyon', value: 'mod', emoji: { name: '🛡️' } },
+            { label: 'Kullanıcı', value: 'user', emoji: { name: '🎈' } },
+            { label: 'Ekonomi', value: 'eco', emoji: { name: '💵' } },
+            { label: 'Diğer', value: 'other', emoji: { name: '🔧' } }
+        ] }] };
+        return interaction.update({ embeds: [embed], components: [menuRow] });
     }
 
-    if (interaction.isStringSelectMenu()) {
+    if (interaction.isChannelSelectMenu()) {
         const channelId = interaction.values[0];
         let d = getDB();
         if (!d.guilds) d.guilds = {};
-        if (!d.guilds[interaction.guild.id]) d.guilds[interaction.guild.id] = { joinChannel: null, leaveChannel: null, joinMsg: '👋 {user} sunucuya hoş geldin!', leaveMsg: '😢 {user} aramızdan ayrıldı.' };
+        if (!d.guilds[interaction.guild.id]) d.guilds[interaction.guild.id] = { joinChannel: null, leaveChannel: null, joinMsg: '👋 {user} sunucuya hoş geldin!', leaveMsg: '😢 {user} aramızdan ayrıldı.', aiChannel: null };
         if (interaction.customId === 'set_join_channel') d.guilds[interaction.guild.id].joinChannel = channelId;
         if (interaction.customId === 'set_leave_channel') d.guilds[interaction.guild.id].leaveChannel = channelId;
+        if (interaction.customId === 'ai_channel_set') d.guilds[interaction.guild.id].aiChannel = channelId;
         saveDB(d);
+        if (interaction.customId === 'ai_channel_set') return interaction.reply({ content: `✅ AI kanalı <#${channelId}> olarak ayarlandı!`, flags: 64 });
         return interaction.reply({ content: `✅ ${interaction.customId === 'set_join_channel' ? 'Giriş' : 'Çıkış'} kanalı <#${channelId}> olarak ayarlandı!`, flags: 64 });
     }
 });
