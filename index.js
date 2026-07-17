@@ -24,8 +24,17 @@ const OWNERS = ['1200687946827837453', '1402724852330139699'];
 
 client.once('ready', () => console.log(`${client.user.tag} aktif!`));
 
+const processedMessages = new Set();
+
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
+    if (processedMessages.has(message.id)) return;
+    processedMessages.add(message.id);
+    setTimeout(() => processedMessages.delete(message.id), 5000);
+    if (message.content.toLowerCase().startsWith('c!') && !processedMessages.has(`cmd_${message.id}`)) {
+        processedMessages.add(`cmd_${message.id}`);
+        setTimeout(() => processedMessages.delete(`cmd_${message.id}`), 5000);
+    }
 
     // ===== AI KANALI =====
     if (message.guild) {
