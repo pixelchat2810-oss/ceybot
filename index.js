@@ -121,14 +121,7 @@ client.on('messageCreate', async (message) => {
 
         const embed = new EmbedBuilder()
             .setTitle('CeyCeyBot V2 - Kategori Seçin')
-            .setDescription(`
-𐙚 Bütün Komutlar
-𐙚 Moderasyon Komutları
-𐙚 Kullanıcı Komutları
-𐙚 Ekonomi Komutları
-𐙚 Diğer Komutlar
-
-> **CeyCey Bot'un Sözü:** ||Her Bir Ekran'ın içinde Her Zaman Ben Varım Unutma||`)
+            .setDescription('𐙚 Bütün Komutlar\n𐙚 Moderasyon Komutları\n𐙚 Kullanıcı Komutları\n𐙚 Ekonomi Komutları\n𐙚 Diğer Komutlar')
             .setColor(0x2f3136);
 
         const row = new ActionRowBuilder().addComponents(
