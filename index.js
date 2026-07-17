@@ -114,26 +114,24 @@ client.on('messageCreate', async (message) => {
 
     if (isMaintenance && message.author.id !== '1200687946827837453') return message.reply('❌ Şuan Bot\'a Bakım Yapılıyor Lütfen Daha Sonra Tekrar Dene!');
 
-    // ---- C!yardim ----
+    // ---- C!yardim (Kategorili) ----
     if (command === 'yardim') {
         commandFound = true;
         if (isMaintenance) return message.reply('❌ Şuan Bot\'a Bakım Yapılıyor Lütfen Daha Sonra Tekrar Dene!');
+
         const embed = new EmbedBuilder()
-            .setAuthor({ name: `| ${client.user.username} > Yardım Menüsü`, iconURL: client.user.displayAvatarURL() })
-            .setColor(0x0099ff)
-            .setDescription(`
-⚜️ **!admin :**
-***C!ban\nC!forceban\nC!forceunban\nC!kick\nC!timeout***
---------------
-🎈 **!kullanıcı :**
-***C!ship\nC!zar\nC!hava\nC!iq\nC!karne\nC!deprem\nC!sunucubilgi***
---------------
-💵 **!ekonomi :**
-***C!bal\nC!cf\nC!s\nC!daily***
---------------
-🔧 **!diğer :**
-***C!lock / C!unlock\nC!rolver / C!rolal\nC!sil\nC!random\nC!seviye***`);
-        return message.reply({ embeds: [embed] });
+            .setAuthor({ name: `${client.user.username} > Yardım Menüsü`, iconURL: client.user.displayAvatarURL() })
+            .setDescription('Aşağıdaki kategorilerden birini seçerek komutları görüntüleyebilirsin.')
+            .setColor(0x0099ff);
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('help_admin').setLabel('Admin').setStyle(ButtonStyle.Danger).setEmoji('⚜️'),
+            new ButtonBuilder().setCustomId('help_user').setLabel('Kullanıcı').setStyle(ButtonStyle.Primary).setEmoji('🎈'),
+            new ButtonBuilder().setCustomId('help_economy').setLabel('Ekonomi').setStyle(ButtonStyle.Success).setEmoji('💵'),
+            new ButtonBuilder().setCustomId('help_other').setLabel('Diğer').setStyle(ButtonStyle.Secondary).setEmoji('🔧')
+        );
+
+        return message.reply({ embeds: [embed], components: [row] });
     }
 
     // ---- C!yapicim ----
@@ -573,9 +571,27 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.isButton()) {
         const customId = interaction.customId;
 
+        // YARDIM KATEGORILERI
+        if (customId.startsWith('help_')) {
+            const category = customId.replace('help_', '');
+            const helpData = {
+                admin: { emoji: '⚜️', title: 'Admin Komutları', cmds: '`C!ban` - Kullanıcıyı yasaklar\n`C!forceban` - ID ile yasakla\n`C!forceunban` - ID ile yasağı kaldır\n`C!kick` - Kullanıcıyı at\n`C!timeout` - Kullanıcıyı sustur\n`C!lock` / `C!unlock` - Kanal kilitle/aç\n`C!rolver` / `C!rolal` - Rol ver/al\n`C!sil` - Mesaj sil' },
+                user: { emoji: '🎈', title: 'Kullanıcı Komutları', cmds: '`C!ship` - Ship yüzdesi\n`C!zar` - Zar at\n`C!hava` - Hava durumu\n`C!iq` - IQ ölç\n`C!karne` - Rastgele karne\n`C!deprem` - Son depremler\n`C!sunucubilgi` / `C!sb` - Sunucu bilgi\n`C!seviye` / `C!rank` - Seviye görüntüle' },
+                economy: { emoji: '💵', title: 'Ekonomi Komutları', cmds: '`C!bal` - Bakiye görüntüle\n`C!cf` - Coinflip (yazı tura)\n`C!s` - Avlan para kazan\n`C!daily` - Günlük 500 Coin' },
+                other: { emoji: '🔧', title: 'Diğer Komutlar', cmds: '`C!yardim` - Bu menü\n`C!yapicim` - Yapımcı bilgisi\n`C!konus` - Konuştur\n`C!etiketlemek` - Duyuru\n`C!onemli` - Önemli duyuru\n`C!cesur` - Cesur bilgisi\n`C!çamlıcakulesi` - Çamlıca\n`C!giris-cikis` - G/C kurulum\n`C!anket` - Anket sistemi\n`C!random` - Rastgele üye\n`C!bakim-ac` / `C!bakim-kapat` - Bakım modu' }
+            };
+            const data = helpData[category];
+            if (!data) return interaction.reply({ content: 'Kategori bulunamadı!', flags: 64 });
+            const embed = new EmbedBuilder()
+                .setTitle(`${data.emoji} ${data.title}`)
+                .setDescription(data.cmds)
+                .setColor(0x5865f2);
+            return interaction.reply({ embeds: [embed], flags: 64 });
+        }
+
         // LOCK/UNLOCK
         if (['lock', 'unlock'].includes(customId)) {
-            if (!interaction.member.permissions.has('ManageChannels')) return interaction.reply({ content: '❌ Yetkin yok!', ephemeral: true });
+            if (!interaction.member.permissions.has('ManageChannels')) return interaction.reply({ content: '❌ Yetkin yok!', flags: 64 });
             const isUnlock = customId === 'unlock';
             await interaction.channel.permissionOverwrites.edit(interaction.guild.id, { SendMessages: isUnlock });
             return interaction.update({
@@ -591,7 +607,7 @@ client.on('interactionCreate', async (interaction) => {
 
         // ANKET
         if (customId.startsWith('poll_settings-')) {
-            if (interaction.user.id !== customId.split('-')[1]) return interaction.reply({ content: 'Bu senin anketin değil!', ephemeral: true });
+            if (interaction.user.id !== customId.split('-')[1]) return interaction.reply({ content: 'Bu senin anketin değil!', flags: 64 });
             const modal = new ModalBuilder().setCustomId('poll_modal').setTitle('Anket Ayarları');
             modal.addComponents(
                 new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('title').setLabel('Başlık').setStyle(TextInputStyle.Short)),
@@ -601,8 +617,8 @@ client.on('interactionCreate', async (interaction) => {
             return interaction.showModal(modal);
         }
         if (customId.startsWith('poll_send-')) {
-            if (interaction.user.id !== customId.split('-')[1]) return interaction.reply({ content: 'Bu senin anketin değil!', ephemeral: true });
-            return interaction.reply({ content: '❌ Önce Ayarlar butonundan anketini yapılandır!', ephemeral: true });
+            if (interaction.user.id !== customId.split('-')[1]) return interaction.reply({ content: 'Bu senin anketin değil!', flags: 64 });
+            return interaction.reply({ content: '❌ Önce Ayarlar butonundan anketini yapılandır!', flags: 64 });
         }
 
         // GIRIS-CIKIS
@@ -620,7 +636,7 @@ client.on('interactionCreate', async (interaction) => {
                 new ButtonBuilder().setCustomId('set_join_channel').setLabel('Giriş Kanalı').setStyle(ButtonStyle.Success).setEmoji('👋'),
                 new ButtonBuilder().setCustomId('set_leave_channel').setLabel('Çıkış Kanalı').setStyle(ButtonStyle.Danger).setEmoji('😢')
             );
-            return interaction.reply({ content: 'Hangi kanalı ayarlamak istersin?', components: [row], ephemeral: true });
+            return interaction.reply({ content: 'Hangi kanalı ayarlamak istersin?', components: [row], flags: 64 });
         }
         if (customId === 'set_join_channel' || customId === 'set_leave_channel') {
             const row = new ActionRowBuilder().addComponents(
@@ -629,7 +645,7 @@ client.on('interactionCreate', async (interaction) => {
                     .setPlaceholder('Kanal seç...')
                     .setChannelTypes(ChannelType.GuildText)
             );
-            return interaction.reply({ content: customId === 'set_join_channel' ? 'Giriş kanalını seç:' : 'Çıkış kanalını seç:', components: [row], ephemeral: true });
+            return interaction.reply({ content: customId === 'set_join_channel' ? 'Giriş kanalını seç:' : 'Çıkış kanalını seç:', components: [row], flags: 64 });
         }
     }
 
@@ -643,13 +659,13 @@ client.on('interactionCreate', async (interaction) => {
             const title = interaction.fields.getTextInputValue('title') || 'Başlıksız Anket';
             const description = interaction.fields.getTextInputValue('description') || 'Açıklama yok';
             const options = interaction.fields.getTextInputValue('options').split('\n').filter(o => o.trim());
-            if (options.length < 2) return interaction.reply({ content: 'En az 2 seçenek gerekli!', ephemeral: true });
+            if (options.length < 2) return interaction.reply({ content: 'En az 2 seçenek gerekli!', flags: 64 });
             const embed = new EmbedBuilder()
                 .setTitle(title)
                 .setDescription(description)
                 .setColor(0x5865f2)
                 .addFields({ name: 'Seçenekler', value: options.map((o, i) => `${i + 1}. ${o}`).join('\n') });
-            await interaction.reply({ content: '✅ Anket hazır!', ephemeral: true });
+            await interaction.reply({ content: '✅ Anket hazır!', flags: 64 });
             const pollMsg = await interaction.channel.send({ embeds: [embed] });
             for (let i = 0; i < options.length; i++) {
                 const emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣'];
@@ -665,7 +681,7 @@ client.on('interactionCreate', async (interaction) => {
         if (customId === 'modal_join') d.guilds[interaction.guild.id].joinMsg = msg;
         if (customId === 'modal_leave') d.guilds[interaction.guild.id].leaveMsg = msg;
         saveDB(d);
-        return interaction.reply({ content: '✅ Mesaj kaydedildi!', ephemeral: true });
+        return interaction.reply({ content: '✅ Mesaj kaydedildi!', flags: 64 });
     }
 
     // KANAL SECIM MENUSU
@@ -677,7 +693,7 @@ client.on('interactionCreate', async (interaction) => {
         if (interaction.customId === 'set_join_channel') d.guilds[interaction.guild.id].joinChannel = channelId;
         if (interaction.customId === 'set_leave_channel') d.guilds[interaction.guild.id].leaveChannel = channelId;
         saveDB(d);
-        return interaction.reply({ content: `✅ ${interaction.customId === 'set_join_channel' ? 'Giriş' : 'Çıkış'} kanalı <#${channelId}> olarak ayarlandı!`, ephemeral: true });
+        return interaction.reply({ content: `✅ ${interaction.customId === 'set_join_channel' ? 'Giriş' : 'Çıkış'} kanalı <#${channelId}> olarak ayarlandı!`, flags: 64 });
     }
 });
 
