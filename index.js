@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelSelectMenuBuilder, ChannelType } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelSelectMenuBuilder, ChannelType, StringSelectMenuBuilder } = require('discord.js');
 const fs = require('fs');
 const axios = require('axios');
 require('dotenv').config();
@@ -114,22 +114,37 @@ client.on('messageCreate', async (message) => {
 
     if (isMaintenance && message.author.id !== '1200687946827837453') return message.reply('❌ Şuan Bot\'a Bakım Yapılıyor Lütfen Daha Sonra Tekrar Dene!');
 
-    // ---- C!yardim (Kategorili) ----
+    // ---- C!yardim (Menülü) ----
     if (command === 'yardim') {
         commandFound = true;
         if (isMaintenance) return message.reply('❌ Şuan Bot\'a Bakım Yapılıyor Lütfen Daha Sonra Tekrar Dene!');
 
         const embed = new EmbedBuilder()
-            .setAuthor({ name: `${client.user.username} > Yardım Menüsü`, iconURL: client.user.displayAvatarURL() })
-            .setColor(0x0099ff)
-            .addFields(
-                { name: '⚜️ Admin', value: '`C!ban` `C!forceban` `C!forceunban` `C!kick` `C!timeout` `C!lock` `C!unlock` `C!rolver` `C!rolal` `C!sil`', inline: false },
-                { name: '🎈 Kullanıcı', value: '`C!ship` `C!zar` `C!hava` `C!iq` `C!karne` `C!deprem` `C!sunucubilgi` `C!sb` `C!seviye` `C!rank`', inline: false },
-                { name: '💵 Ekonomi', value: '`C!bal` `C!cf` `C!s` `C!daily`', inline: false },
-                { name: '🔧 Diğer', value: '`C!yapicim` `C!konus` `C!etiketlemek` `C!onemli` `C!cesur` `C!çamlıcakulesi` `C!giris-cikis` `C!anket` `C!random` `C!bakim-ac` `C!bakim-kapat`', inline: false }
-            );
+            .setTitle('CeyCeyBot V2 - Kategori Seçin')
+            .setDescription(`
+𐙚 Bütün Komutlar
+𐙚 Moderasyon Komutları
+𐙚 Kullanıcı Komutları
+𐙚 Ekonomi Komutları
+𐙚 Diğer Komutlar
 
-        return message.reply({ embeds: [embed] });
+> **CeyCey Bot'un Sözü:** ||Her Bir Ekran'ın içinde Her Zaman Ben Varım Unutma||`)
+            .setColor(0x2f3136);
+
+        const row = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('help_menu')
+                .setPlaceholder('Kategori Seçin')
+                .addOptions([
+                    { label: 'Bütün Komutlar', value: 'all', emoji: '📦' },
+                    { label: 'Moderasyon', value: 'mod', emoji: '🛡️' },
+                    { label: 'Kullanıcı', value: 'user', emoji: '🎈' },
+                    { label: 'Ekonomi', value: 'eco', emoji: '💵' },
+                    { label: 'Diğer', value: 'other', emoji: '🔧' }
+                ])
+        );
+
+        return message.reply({ embeds: [embed], components: [row] });
     }
 
     // ---- C!yapicim ----
@@ -665,6 +680,20 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     // KANAL SECIM MENUSU
+    // YARDIM MENÜSÜ
+    if (interaction.isStringSelectMenu() && interaction.customId === 'help_menu') {
+        const val = interaction.values[0];
+        const menus = {
+            all: { title: '📦 Bütün Komutlar', cmds: '**⚜️ Moderasyon**\n`C!ban` `C!forceban` `C!forceunban` `C!kick` `C!timeout` `C!lock` `C!unlock` `C!rolver` `C!rolal` `C!sil`\n\n**🎈 Kullanıcı**\n`C!ship` `C!zar` `C!hava` `C!iq` `C!karne` `C!deprem` `C!sunucubilgi` `C!sb` `C!seviye` `C!rank`\n\n**💵 Ekonomi**\n`C!bal` `C!cf` `C!s` `C!daily`\n\n**🔧 Diğer**\n`C!yapicim` `C!konus` `C!etiketlemek` `C!onemli` `C!cesur` `C!çamlıcakulesi` `C!giris-cikis` `C!anket` `C!random` `C!bakim-ac` `C!bakim-kapat`' },
+            mod: { title: '🛡️ Moderasyon Komutları', cmds: '`C!ban` - Kullanıcıyı yasakla\n`C!forceban` - ID ile yasakla\n`C!forceunban` - ID ile yasağı kaldır\n`C!kick` - Kullanıcıyı at\n`C!timeout` - Kullanıcıyı sustur\n`C!lock` - Kanalı kilitle\n`C!unlock` - Kanal kilidini aç\n`C!rolver` / `C!rolal` - Rol ver/al\n`C!sil` - Mesaj sil' },
+            user: { title: '🎈 Kullanıcı Komutları', cmds: '`C!ship` - Ship yüzdesi\n`C!zar` - Zar at (1-25)\n`C!hava` - Hava durumu\n`C!iq` - IQ ölç\n`C!karne` - Rastgele karne\n`C!deprem` - Son depremler\n`C!sunucubilgi` / `C!sb` - Sunucu bilgi\n`C!seviye` / `C!rank` - Seviye görüntüle' },
+            eco: { title: '💵 Ekonomi Komutları', cmds: '`C!bal` - Bakiye görüntüle\n`C!cf` - Coinflip (yazı tura)\n`C!s` - Avlan para kazan\n`C!daily` - Günlük 500 Coin' },
+            other: { title: '🔧 Diğer Komutlar', cmds: '`C!yardim` - Yardım menüsü\n`C!yapicim` - Yapımcı bilgisi\n`C!konus` - Konuştur (sahip)\n`C!etiketlemek` - @everyone duyuru\n`C!onemli` - Önemli duyuru\n`C!cesur` - Cesur bilgisi\n`C!çamlıcakulesi` - Çamlıca Kulesi\n`C!giris-cikis` - G/C kurulum paneli\n`C!anket` - Anket sistemi\n`C!random` - Rastgele üye seç\n`C!bakim-ac` / `C!bakim-kapat` - Bakım modu' }
+        };
+        const data = menus[val];
+        return interaction.reply({ embeds: [new EmbedBuilder().setTitle(data.title).setDescription(data.cmds).setColor(0x2f3136)], flags: 64 });
+    }
+
     if (interaction.isStringSelectMenu()) {
         const channelId = interaction.values[0];
         let d = getDB();
