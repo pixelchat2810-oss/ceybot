@@ -684,7 +684,12 @@ client.on('interactionCreate', async (interaction) => {
             other: { title: '🔧 Diğer Komutlar', cmds: '`C!yardim` - Yardım menüsü\n`C!yapicim` - Yapımcı bilgisi\n`C!konus` - Konuştur (sahip)\n`C!etiketlemek` - @everyone duyuru\n`C!onemli` - Önemli duyuru\n`C!cesur` - Cesur bilgisi\n`C!çamlıcakulesi` - Çamlıca Kulesi\n`C!giris-cikis` - G/C kurulum paneli\n`C!anket` - Anket sistemi\n`C!random` - Rastgele üye seç\n`C!bakim-ac` / `C!bakim-kapat` - Bakım modu' }
         };
         const data = menus[val];
-        return interaction.reply({ embeds: [new EmbedBuilder().setTitle(data.title).setDescription(data.cmds).setColor(0x2f3136)], flags: 64 });
+        const embed = new EmbedBuilder()
+            .setTitle(data.title)
+            .setDescription(data.cmds)
+            .setColor(0x2f3136)
+            .setFooter({ text: 'Kategori değiştirmek için menüyü kullan' });
+        return interaction.update({ embeds: [embed], components: [interaction.message.components] });
     }
 
     if (interaction.isStringSelectMenu()) {
