@@ -1,1 +1,33 @@
-{}
+{
+  "1402724852330139699": {
+    "balance": 500,
+    "lastDaily": 1784293618016,
+    "xp": 136,
+    "level": 3,
+    "msgCount": {
+      "1520126452631339190": 22
+    }
+  },
+  "1522330589099725039": {
+    "balance": 0,
+    "lastDaily": 0,
+    "xp": 33,
+    "level": 1,
+    "msgCount": {
+      "1520126452631339190": 2
+    }
+  },
+  "guilds": {
+    "1520126452631339190": {
+      "joinChannel": "1527631757116182619",
+      "leaveChannel": "1527631757116182619",
+      "joinMsg": "👋 {user} sunucuya shoş geldin!",
+      "leaveMsg": "😢 {user} aramızdaan ayrıldı.",
+      "aiChannel": "1527665012917665934"
+    }
+  },
+  "ai_cooldown_1520126452631339190": 1784294481449,
+  "_bakim": [
+    "c!setup"
+  ]
+}

@@ -179,7 +179,7 @@ client.on('messageCreate', async (message) => {
     if (['yapicim', 'yapimci', 'yapımcı', 'yapımcın'].includes(command)) {
         commandFound = true;
         const embed = new EmbedBuilder()
-            .setTitle(Yapımcın kim? <@1200687946827837453> / Yan Yapımcı <@1402724852330139699>`)
+            .setTitle(`Yapımcın kim? <@1200687946827837453> / Yan Yapımcı <@1402724852330139699>`)
             .setDescription('𝐘𝐚𝐩𝐢𝐦𝐜𝐢𝐦 𝐌𝐞𝐥𝐢𝐬 𝐚𝐝𝐥𝐢 𝐤𝐮𝐥𝐥𝐚𝐧𝐢𝐜𝐢\n𝐛𝐞𝐧𝐢 𝐨 𝐭𝐚𝐬𝐚𝐫𝐥𝐚𝐝𝐢 :𝟑.𝐇𝐚𝐭𝐭𝐚 𝐤𝐞𝐧𝐝𝐢𝐬𝐢 𝐑-𝐭𝐮𝐛𝐞𝐫 𝐤𝐚𝐧𝐚𝐥𝐢𝐧𝐢𝐧 𝐢𝐬𝐦𝐢𝐝𝐞 𝐑𝐨𝐛𝐥𝐨𝐱𝐌𝐞𝐥𝐬𝐢')
             .setFooter({ text: '𝐌𝐞𝐥𝐢𝐬 = 𝐘𝐚𝐩𝐢𝐦𝐜𝐢𝐦 ⚒️' })
             .setColor(0xFFD1DC)
