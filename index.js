@@ -22,19 +22,28 @@ function getGuildData(guildId) {
 
 const OWNERS = ['1200687946827837453', '1402724852330139699'];
 
+process.on('uncaughtException', e => console.error('UNCAUGHT:', e));
+process.on('unhandledRejection', e => console.error('UNHANDLED:', e));
+
+const msgCache = new Map();
+const CACHE_TTL = 5000;
+
 client.once('ready', () => console.log(`${client.user.tag} aktif!`));
 
-const processedMessages = new Set();
+function isDuplicate(id) {
+    const now = Date.now();
+    if (msgCache.has(id) && now - msgCache.get(id) < CACHE_TTL) return true;
+    msgCache.set(id, now);
+    if (msgCache.size > 100) {
+        const cutoff = now - CACHE_TTL;
+        for (const [k, v] of msgCache) if (v < cutoff) msgCache.delete(k);
+    }
+    return false;
+}
 
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
-    if (processedMessages.has(message.id)) return;
-    processedMessages.add(message.id);
-    setTimeout(() => processedMessages.delete(message.id), 5000);
-    if (message.content.toLowerCase().startsWith('c!') && !processedMessages.has(`cmd_${message.id}`)) {
-        processedMessages.add(`cmd_${message.id}`);
-        setTimeout(() => processedMessages.delete(`cmd_${message.id}`), 5000);
-    }
+    if (isDuplicate(message.id)) return;
 
     // ===== AI KANALI =====
     if (message.guild) {
