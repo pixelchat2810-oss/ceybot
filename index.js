@@ -163,7 +163,7 @@ client.on('messageCreate', async (message) => {
     // ---- BAKIM KONTROL (per-komut) ----
     if (!OWNERS.includes(message.author.id) && !['bakim-ac', 'bakim-kapat'].includes(command)) {
         let d = getDB();
-        const bakimli = d._bakim || [];
+        const bakimli = (d._bakim || []).map(c => c.replace(/^c!/, ''));
         if (bakimli.includes(command)) return message.reply('❌ Bu komut şu anda bakımda!');
     }
 
@@ -445,7 +445,7 @@ Lütfen bu mesajı başka bir sunucuya kopyalayıp yapıştırarak diğer insanl
             const bakimli = d._bakim || [];
             return message.reply(bakimli.length ? `Bakımdaki komutlar: ${bakimli.map(c => `\`${c}\``).join(', ')}` : 'Bakımda hiç komut yok.');
         }
-        const target = args[0].toLowerCase();
+        let target = args[0].toLowerCase().replace(/^c!/, '');
         let d = getDB();
         if (!d._bakim) d._bakim = [];
         if (d._bakim.includes(target)) return message.reply(`❌ \`${target}\` zaten bakımda!`);
@@ -458,7 +458,7 @@ Lütfen bu mesajı başka bir sunucuya kopyalayıp yapıştırarak diğer insanl
         commandFound = true;
         if (!OWNERS.includes(message.author.id)) return message.reply(`𝐁𝐮 𝐤𝐨𝐦𝐮𝐭𝐮 𝐤𝐮𝐥𝐥𝐚𝐧𝐚 𝐛𝐢𝐥𝐞𝐜𝐞𝐠𝐢𝐧𝐢𝐦𝐢 𝐬𝐚𝐧𝐝𝐢𝐧?\n<@${message.author.id}>`);
         if (!args.length) return message.reply('❌ Bakımdan çıkarmak için komut adı gir. Ör: `C!bakim-kapat sil`');
-        const target = args[0].toLowerCase();
+        let target = args[0].toLowerCase().replace(/^c!/, '');
         let d = getDB();
         if (!d._bakim) d._bakim = [];
         if (!d._bakim.includes(target)) return message.reply(`❌ \`${target}\` bakımda değil!`);
