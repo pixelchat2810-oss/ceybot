@@ -16,7 +16,7 @@ const saveDB = (db) => fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 function getGuildData(guildId) {
     let db = getDB();
     if (!db.guilds) db.guilds = {};
-    if (!db.guilds[guildId]) db.guilds[guildId] = { joinChannel: null, leaveChannel: null, joinMsg: '👋 {user} sunucuya hoş geldin!', leaveMsg: '😢 {user} aramızdan ayrıldı.', aiChannel: null };
+    if (!db.guilds[guildId]) db.guilds[guildId] = { joinChannel: null, leaveChannel: null, joinMsg: '👋 {user} sunucuya hoş geldin!', leaveMsg: '😢 {user} aramızdan ayrıldı.', aiChannel: null, rankChannel: null };
     return db.guilds[guildId];
 }
 
@@ -81,7 +81,9 @@ client.on('messageCreate', async (message) => {
     if (db[message.author.id].xp >= db[message.author.id].level * 100) {
         db[message.author.id].level++;
         db[message.author.id].xp = 0;
-        message.channel.send(`🎉 Tebrikler <@${message.author.id}>, **${db[message.author.id].level}.** seviyeye ulaştın!`);
+        const rankChannel = message.guild ? (getGuildData(message.guild.id).rankChannel || message.channel.id) : message.channel.id;
+        const target = message.guild?.channels.cache.get(rankChannel) || message.channel;
+        target.send(`🎉 Tebrikler <@${message.author.id}>, **${db[message.author.id].level}.** seviyeye ulaştın!`);
     }
     saveDB(db);
 
@@ -532,8 +534,21 @@ Lütfen bu mesajı başka bir sunucuya kopyalayıp yapıştırarak diğer insanl
         return message.reply(`🎁 Günlük ödülün olan **500 OwO Coin** hesabına eklendi!`);
     }
 
-    // ---- C!seviye / C!rank ----
-    if (['seviye', 'rank'].includes(command)) {
+    // ---- C!rank (Ranklog Kanal Kurulumu) ----
+    if (command === 'rank') {
+        commandFound = true;
+        if (!message.member.permissions.has('ManageGuild')) return message.reply('❌ Yetkin yok!');
+        const row = new ActionRowBuilder().addComponents(
+            new ChannelSelectMenuBuilder()
+                .setCustomId('rank_channel_set')
+                .setPlaceholder('Ranklog kanalını seç...')
+                .setChannelTypes(ChannelType.GuildText)
+        );
+        return message.reply({ content: 'Seviye atlama bildirimlerinin gideceği kanalı seç:', components: [row] });
+    }
+
+    // ---- C!seviye (Level Görüntüle) ----
+    if (command === 'seviye') {
         commandFound = true;
         let d = getDB();
         const user = message.mentions.users.first() || message.author;
@@ -841,7 +856,7 @@ client.on('interactionCreate', async (interaction) => {
         const val = interaction.values[0];
         const menus = {
             all: { title: '📦 Bütün Komutlar', cmds: '**⚜️ Moderasyon**\n`C!ban` `C!kick` `C!lock` `C!unlock` `C!rolver` `C!rolal` `C!sil`\n\n**🎈 Kullanıcı**\n`C!ship` `C!zar` `C!hava` `C!iq` `C!karne` `C!deprem` `C!sunucubilgi` `C!sw` `C!seviye` `C!rank`\n\n**💵 Ekonomi**\n`C!cash` `C!cf` `C!s` `C!daily`\n\n**🔧 Diğer**\n`C!yapicim` `C!konus` `C!etiketlemek` `C!onemli` `C!setup` `C!cesur` `C!çamlıcakulesi` `C!giris-cikis` `C!anket` `C!random` `C!mesajtop` `C!bakim-ac` `C!bakim-kapat`' },            mod: { title: '🛡️ Moderasyon Komutları', cmds: '`C!ban` - Kullanıcıyı yasakla\n`C!kick` - Kullanıcıyı at\n`C!lock` - Kanalı kilitle\n`C!unlock` - Kanal kilidini aç\n`C!rolver` / `C!rolal` - Rol ver/al\n`C!sil` - Mesaj sil' },
-            user: { title: '🎈 Kullanıcı Komutları', cmds: '`C!ship` - Ship yüzdesi\n`C!zar` - Zar at (1-25)\n`C!hava` - Hava durumu\n`C!iq` - IQ ölç\n`C!karne` - Rastgele karne\n`C!deprem` - Son depremler\n`C!sunucubilgi` / `C!sw` - Sunucu bilgi\n`C!seviye` / `C!rank` - Seviye görüntüle' },
+            user: { title: '🎈 Kullanıcı Komutları', cmds: '`C!ship` - Ship yüzdesi\n`C!zar` - Zar at (1-25)\n`C!hava` - Hava durumu\n`C!iq` - IQ ölç\n`C!karne` - Rastgele karne\n`C!deprem` - Son depremler\n`C!sunucubilgi` / `C!sw` - Sunucu bilgi\n`C!seviye` - Seviye görüntüle\n`C!rank` - Ranklog kanalı kur' },
             eco: { title: '💵 Ekonomi Komutları', cmds: '`C!cash` - Bakiye görüntüle\n`C!cf` - Coinflip (yazı tura)\n`C!s` - Avlan para kazan\n`C!daily` - Günlük 500 Coin' },
             other: { title: '🔧 Diğer Komutlar', cmds: '`C!yardim` - Yardım menüsü\n`C!yapicim` - Yapımcı bilgisi\n`C!konus` - Konuştur (sahip)\n`C!etiketlemek` - @everyone duyuru\n`C!onemli` - Önemli duyuru\n`C!cesur` - Cesur bilgisi\n`C!çamlıcakulesi` - Çamlıca Kulesi\n`C!setup` - AI kanalı kur\n`C!giris-cikis` - G/C kurulum paneli\n`C!anket` - Anket sistemi\n`C!random` - Rastgele üye seç\n`C!mesajtop` - Mesaj sıralaması\n`C!bakim-ac` / `C!bakim-kapat` - Komut bakımı' }
         };
@@ -864,12 +879,14 @@ client.on('interactionCreate', async (interaction) => {
         const channelId = interaction.values[0];
         let d = getDB();
         if (!d.guilds) d.guilds = {};
-        if (!d.guilds[interaction.guild.id]) d.guilds[interaction.guild.id] = { joinChannel: null, leaveChannel: null, joinMsg: '👋 {user} sunucuya hoş geldin!', leaveMsg: '😢 {user} aramızdan ayrıldı.', aiChannel: null };
+        if (!d.guilds[interaction.guild.id]) d.guilds[interaction.guild.id] = { joinChannel: null, leaveChannel: null, joinMsg: '👋 {user} sunucuya hoş geldin!', leaveMsg: '😢 {user} aramızdan ayrıldı.', aiChannel: null, rankChannel: null };
         if (interaction.customId === 'set_join_channel') d.guilds[interaction.guild.id].joinChannel = channelId;
         if (interaction.customId === 'set_leave_channel') d.guilds[interaction.guild.id].leaveChannel = channelId;
         if (interaction.customId === 'ai_channel_set') d.guilds[interaction.guild.id].aiChannel = channelId;
+        if (interaction.customId === 'rank_channel_set') d.guilds[interaction.guild.id].rankChannel = channelId;
         saveDB(d);
         if (interaction.customId === 'ai_channel_set') return interaction.reply({ content: `✅ AI kanalı <#${channelId}> olarak ayarlandı!`, flags: 64 });
+        if (interaction.customId === 'rank_channel_set') return interaction.reply({ content: `✅ Ranklog kanalı <#${channelId}> olarak ayarlandı!`, flags: 64 });
         return interaction.reply({ content: `✅ ${interaction.customId === 'set_join_channel' ? 'Giriş' : 'Çıkış'} kanalı <#${channelId}> olarak ayarlandı!`, flags: 64 });
     }
 });
