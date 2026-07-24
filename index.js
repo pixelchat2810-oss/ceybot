@@ -25,19 +25,20 @@ const OWNERS = ['1200687946827837453', '1402724852330139699'];
 process.on('uncaughtException', e => console.error('UNCAUGHT:', e));
 process.on('unhandledRejection', e => console.error('UNHANDLED:', e));
 
-const msgCache = new Map();
+const DEDUP_FILE = './.msg_dedup';
 const CACHE_TTL = 5000;
 
 client.once('ready', () => console.log(`${client.user.tag} aktif!`));
 
 function isDuplicate(id) {
     const now = Date.now();
-    if (msgCache.has(id) && now - msgCache.get(id) < CACHE_TTL) return true;
-    msgCache.set(id, now);
-    if (msgCache.size > 100) {
-        const cutoff = now - CACHE_TTL;
-        for (const [k, v] of msgCache) if (v < cutoff) msgCache.delete(k);
-    }
+    let cache = {};
+    try { cache = JSON.parse(fs.readFileSync(DEDUP_FILE, 'utf8')); } catch {}
+    if (cache[id] && now - cache[id] < CACHE_TTL) return true;
+    cache[id] = now;
+    const cutoff = now - CACHE_TTL;
+    for (const [k, v] of Object.entries(cache)) if (v < cutoff) delete cache[k];
+    try { fs.writeFileSync(DEDUP_FILE, JSON.stringify(cache)); } catch {}
     return false;
 }
 
