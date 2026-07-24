@@ -537,7 +537,7 @@ Lütfen bu mesajı başka bir sunucuya kopyalayıp yapıştırarak diğer insanl
     // ---- C!rank (Ranklog Kanal Kurulumu) ----
     if (command === 'rank') {
         commandFound = true;
-        if (!message.member.permissions.has('ManageGuild')) return message.reply('❌ Yetkin yok!');
+        if (!message.member.permissions.has('ManageGuild')) return message.reply('❌ **Bu komutu kullanmak için `Sunucuyu Yönet` yetkisine sahip olmalısın!**');
         const row = new ActionRowBuilder().addComponents(
             new ChannelSelectMenuBuilder()
                 .setCustomId('rank_channel_set')
@@ -653,7 +653,7 @@ Lütfen bu mesajı başka bir sunucuya kopyalayıp yapıştırarak diğer insanl
     // ---- C!setup (AI Kanalı) ----
     if (command === 'setup') {
         commandFound = true;
-        if (!message.member.permissions.has('ManageGuild')) return message.reply('❌ Yetkin yok!');
+        if (!message.member.permissions.has('ManageGuild')) return message.reply('❌ **Bu komutu kullanmak için `Sunucuyu Yönet` yetkisine sahip olmalısın!**');
         const row = new ActionRowBuilder().addComponents(
             new ChannelSelectMenuBuilder()
                 .setCustomId('ai_channel_set')
@@ -666,7 +666,7 @@ Lütfen bu mesajı başka bir sunucuya kopyalayıp yapıştırarak diğer insanl
     // ---- C!giris-cikis ----
     if (command === 'giris-cikis') {
         commandFound = true;
-        if (!message.member.permissions.has('ManageGuild')) return message.reply('❌ Yetkin yok!');
+        if (!message.member.permissions.has('ManageGuild')) return message.reply('❌ **Bu komutu kullanmak için `Sunucuyu Yönet` yetkisine sahip olmalısın!**');
         const embed = new EmbedBuilder()
             .setTitle('Giriş-Çıkış Kurulum Paneli')
             .setDescription('Aşağıdaki butonları kullanarak sistemi özelleştir.')
@@ -729,7 +729,7 @@ client.on('interactionCreate', async (interaction) => {
 
         // LOCK/UNLOCK
         if (['lock', 'unlock'].includes(customId)) {
-            if (!interaction.member.permissions.has('ManageChannels')) return interaction.reply({ content: '❌ Yetkin yok!', flags: 64 });
+            if (!interaction.member.permissions.has('ManageChannels')) return interaction.reply({ content: '❌ **Bu butonu kullanmak için `Kanalları Yönet` yetkisine sahip olmalısın!**', flags: 64 });
             const isUnlock = customId === 'unlock';
             await interaction.channel.permissionOverwrites.edit(interaction.guild.id, { SendMessages: isUnlock });
             return interaction.update({
