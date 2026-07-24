@@ -157,7 +157,7 @@ client.on('messageCreate', async (message) => {
     if (['yapicim', 'yapimci', 'yapımcı', 'yapımcın'].includes(command)) {
         commandFound = true;
         const embed = new EmbedBuilder()
-            .setTitle(`@PixelDeveloper Tarafından Yapılmıştır.`)
+            .setTitle(`@PixelDeveloperPD Tarafından Yapılmıştır.`)
             .setDescription('Bu Bot Pixel Tarafından Yapılmıştır. Komutlar Melis Tarafından Kodlanmıştır. Komutları Güncelleyen Pixel')
             .setFooter({ text: 'Pixel = Yapımcı ⚒️' })
             .setColor(0xFFD1DC)
