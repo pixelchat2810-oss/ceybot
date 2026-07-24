@@ -88,52 +88,9 @@ client.on('messageCreate', async (message) => {
     }
     saveDB(db);
 
-    // ===== CHATBOT (Prefixsiz) =====
-    const chatMap = {
-        'ceycey': 'Efendim',
-        'naber': 'İyi sen?',
-        'iyi bende': 'e güzel. yardım ihtiyaç olursa buradayım!',
-        'nasıl konuşuyorsun': 'Ağzımla!',
-        'sus': 'Tamam.',
-        'senin adın ne': 'Benim Adım Ceycey!',
-        'bak adam ol': 'Sen adam ol!',
-        'seni öpebilir miyim': 'Yapabilirsen!',
-        'öğürsemiş tosun': 'Sensin o!',
-        'seni sikeceğim': 'Tamam!',
-        'selamın aleyküm': 'Aleyküm selam!',
-        'selamun aleyküm': 'Aleyküm selam!',
-        'sa': 'Aleyküm selam!',
-        'ne diyon ki': 'Birşey demiyorum ki!',
-        'düzelt çabuk şu hatayı': 'Benim elimde değil, kendiliğinden hata veriyor!',
-        'nasılsın': 'İyiyim.',
-        'ne yapıyorsun': 'Oturuyorum, sizi izliyorum.👽',
-        'tamam': 'Tamam.',
-        'nasıl konuşuyorsun?': 'Ağzımla!',
-        'ne diyon ki?': 'Birşey demiyorum.',
-        'nasılsın?': 'İyiyim.',
-        'ne yapıyorsun?': 'Oturuyorum, sizi izliyorum.👽',
-        'tamam.': 'Tamam.',
-        'senin adın ne?': 'Ceycey?',
-        ':middle_finger:': 'Tamam.'
-    };
     const userMsg = message.content.toLowerCase();
-    if (chatMap[userMsg]) {
-        await message.channel.sendTyping();
-        setTimeout(async () => await message.reply(chatMap[userMsg]), 1000);
-        return;
-    }
 
     // ===== PREFIXSIZ KOMUTLAR =====
-    if (userMsg === 'ceylinkimdir?') {
-        const embed = new EmbedBuilder()
-            .setTitle('𝐂𝐞𝐲𝐥𝐢𝐧 𝐊𝐢𝐦𝐝𝐢𝐫? <@1273996127943004251>')
-            .setDescription('𝐂𝐞𝐲𝐥𝐢𝐧 𝟏𝟒 𝐲𝐚𝐬𝐢𝐧𝐝𝐚 𝐘𝐨𝐮𝐭𝐮𝐛𝐞𝐝𝐞 𝟖𝐤 𝐚𝐛𝐨𝐧𝐞𝐬𝐢 𝐨𝐥𝐚𝐧 𝐧𝐚𝐳𝐢𝐤 𝐯𝐞 𝐭𝐚𝐭𝐥𝐢𝐬 𝐛𝐢𝐫 𝐤𝐢𝐳. 𝐚𝐫𝐤𝐚𝐝𝐚𝐬𝐥𝐚𝐫𝐢𝐧𝐚 𝐤𝐚𝐫𝐬𝐢 𝐜𝐨𝐤 𝐬𝐚𝐦𝐢𝐦𝐢𝐝𝐢𝐫 𝐯𝐞 𝐤𝐢𝐦𝐬𝐞𝐲𝐢 𝐮𝐳𝐦𝐞𝐳.')
-            .setFooter({ text: '𝐂𝐞𝐲𝐥𝐢𝐧 = 𝐓𝐚𝐭𝐥𝐢𝐥𝐢𝐤💗' })
-            .setColor(0x001c8b)
-            .setThumbnail('https://cdn.discordapp.com/attachments/1266445451650007182/1414707722242359306/Baslksz34_20250909002300.png?ex=68c08cbc&is=68bf3b3c&hm=d4e3b51c74e76505e347fbbd8aa0e0c6103197130b2b53df4c04d75fc7b8c4b3&');
-        return message.reply({ embeds: [embed] });
-    }
-
     if (userMsg === 'canlı') {
         await message.delete().catch(() => {});
         const embed = new EmbedBuilder()
@@ -200,9 +157,9 @@ client.on('messageCreate', async (message) => {
     if (['yapicim', 'yapimci', 'yapımcı', 'yapımcın'].includes(command)) {
         commandFound = true;
         const embed = new EmbedBuilder()
-            .setTitle(`Yapımcın kim? <@1200687946827837453> / Yan Yapımcı <@1402724852330139699>`)
-            .setDescription('𝐘𝐚𝐩𝐢𝐦𝐜𝐢𝐦 𝐌𝐞𝐥𝐢𝐬 𝐚𝐝𝐥𝐢 𝐤𝐮𝐥𝐥𝐚𝐧𝐢𝐜𝐢\n𝐛𝐞𝐧𝐢 𝐨 𝐭𝐚𝐬𝐚𝐫𝐥𝐚𝐝𝐢 :𝟑.𝐇𝐚𝐭𝐭𝐚 𝐤𝐞𝐧𝐝𝐢𝐬𝐢 𝐑-𝐭𝐮𝐛𝐞𝐫 𝐤𝐚𝐧𝐚𝐥𝐢𝐧𝐢𝐧 𝐢𝐬𝐦𝐢𝐝𝐞 𝐑𝐨𝐛𝐥𝐨𝐱𝐌𝐞𝐥𝐬𝐢')
-            .setFooter({ text: '𝐌𝐞𝐥𝐢𝐬 = 𝐘𝐚𝐩𝐢𝐦𝐜𝐢𝐦 ⚒️' })
+            .setTitle(`@PixelDeveloper Tarafından Yapılmıştır.`)
+            .setDescription('Bu Bot Pixel Tarafından Yapılmıştır. Komutlar Melis Tarafından Kodlanmıştır. Komutları Güncelleyen Pixel')
+            .setFooter({ text: 'Pixel = Yapımcı ⚒️' })
             .setColor(0xFFD1DC)
             .setThumbnail('https://cdn.discordapp.com/attachments/1266445451650007182/1447989354462052393/Upfoto_bvvDXlQSVg4fGJsy92HK4bHsOY2FkFU4zcoGJWI3pvvNU.jpg?ex=6939a0ac&is=69384f2c&hm=0afabdd9bb6c00ea117091c301c6a92824bd4441ed879304df08491e5f2ea82e&');
         return message.reply({ embeds: [embed] });
